@@ -1,27 +1,36 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useSession, signIn } from 'next-auth/react';
 import { FcGoogle } from "react-icons/fc";
 import { FaGithub } from "react-icons/fa";
-
+import axios from 'axios';
 const SignupForm = () => {
+    const router = useRouter();
+
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
 
-    const router = useRouter();
+    const { data: session, status: sessionStatus } = useSession();
+
+    useEffect(() => {
+        if (sessionStatus === "authenticated") {
+            router.replace("/dashboard");
+        }
+    }, [sessionStatus, router]);
 
     const isValidEmail = (email: string) => {
         const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
         return emailRegex.test(email);
     };
 
-    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        console.log(`Name: ${name} Email: ${email} Password: ${password}`);
+        console.log("Error: ", error)
         if (!name || !email || !password) {
             setError("Please fill all the fields");
             return;
@@ -38,11 +47,29 @@ const SignupForm = () => {
         }
 
         try {
+            const existingUser = await axios.post("/api/existingUser", {
+                email
+            });
+            console.log("Existing User: ", existingUser)
+            const user = existingUser.data;
+            if (user) {
+                setError("User already exists");
+                return;
+            }
 
-        } catch (error) {
-            console.log("Error during signup: ", error);
+            const response = await axios.post("/api/signup", {
+                name,
+                email,
+                password
+            });
+            if (response.status === 201) {
+                const form = e.target as HTMLFormElement;
+                form.reset();
+                router.push("/");
+            }
+        } catch (err) {
+            console.log("Error during signup: ", err);
         }
-
     }
     return (
         <div className='flex font-poppins items-center justify-center mx-[14vw] lg:mx-auto dark:bg-gray-900 xl:w-1/3 lg:w-1/2 max-w-screen min-h-screen'>
@@ -99,7 +126,7 @@ const SignupForm = () => {
                         {
                             error && (
                                 <div className="bg-red-500 text-white w-fit text-sm py-1 px-3 rounded-md mt-2">
-                                    Error
+                                    {error}
                                 </div>
                             )
                         }
@@ -122,13 +149,13 @@ const SignupForm = () => {
                             className="flex items-center justify-center mt-5 flex-wrap"
                         >
                             <button
-                                onClick={() => alert("Google Sign In")}
+                                onClick={() => signIn("google")}
                                 className="hover:scale-105 ease-in-out duration-300 shadow-lg p-2 rounded-lg m-1"
                             >
                                 <FcGoogle size={25} className="max-w-[25px]" />
                             </button>
                             <button
-                                onClick={() => alert("Github Sign In")}
+                                onClick={() => signIn("github")}
                                 className="hover:scale-105 ease-in-out duration-300 shadow-lg p-2 rounded-lg m-1"
                             >
                                 <FaGithub size={25} className="max-w-[25px] filter dark:invert" />
