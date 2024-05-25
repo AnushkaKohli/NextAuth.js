@@ -52,7 +52,7 @@ const SignupForm = () => {
             });
             console.log("Existing User: ", existingUser)
             const user = existingUser.data;
-            if (user) {
+            if (user !== "User does not exist") {
                 setError("User already exists");
                 return;
             }
@@ -65,7 +65,12 @@ const SignupForm = () => {
             if (response.status === 201) {
                 const form = e.target as HTMLFormElement;
                 form.reset();
-                router.push("/");
+                await signIn('credentials', {
+                    redirect: true,
+                    email: email,
+                    password: password,
+                    callbackUrl: '/'
+                })
             }
         } catch (err) {
             console.log("Error during signup: ", err);
